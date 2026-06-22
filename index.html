@@ -17,15 +17,46 @@
         src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
         integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" 
         crossorigin="anonymous"></script>
-    
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background-color: #f9f9f9; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h2 { margin-top: 0; }
-        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; width: 100%; font-size: 16px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #status { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 6px; font-weight: bold; }
-    </style>
+    /* 1. ページ全体の高さ確保とレイアウト設定 */
+    body { 
+        font-family: sans-serif; 
+        margin: 0; 
+        padding: 0; 
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh; /* 画面全体の高さを確保 */
+        background-color: #f9f9f9;
+    }
+
+    /* 2. メインコンテンツを囲むラッパーの設定（重要） */
+    .wrapper {
+        flex: 1;             /* 残りのスペースをすべて占有する */
+        display: flex;       /* 中身を配置するためにFlexbox化 */
+        justify-content: center; /* 中身を横中央へ */
+        align-items: center;     /* 中身を縦中央へ */
+        padding: 20px;
+    }
+
+    .container { 
+        width: 100%;
+        max-width: 600px; 
+        background: #fff; 
+        padding: 30px; 
+        border-radius: 12px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    }
+
+    /* 3. フッターのスタイル */
+    footer {
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        font-size: 0.9em;
+        border-top: 1px solid #ccc;
+        background: #fff; /* 背景色を追加すると見栄えが良くなります */
+    }
+</style>
 </head>   
 <body>
     <div class="container">
@@ -110,7 +141,7 @@
             convertBtn.disabled = false;
         });
     </script>
- <footer>
+     <footer>
     <div style="text-align: center; margin-top: 50px; padding: 20px; border-top: 1px solid #ccc; color: #666; font-size: 0.9em;">
         <p>
             Credits: 
