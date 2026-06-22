@@ -53,14 +53,14 @@
         });
 
         convertBtn.addEventListener('click', async () => {
-            convertBtn.disabled = true;
             const files = uploader.files;
-            const zip = new JSZip();
+            convertBtn.disabled = true;
+            status.textContent = "エンジン読み込み中...";
             
-            if (!ffmpeg.isLoaded()) {
-                status.textContent = "エンジン読み込み中...";
-                await ffmpeg.load();
-            }
+            if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+            // 変換結果を格納する配列
+            const results = [];
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -73,18 +73,7 @@
                     await ffmpeg.run('-i', inputName, '-c', 'copy', outputName);
                     
                     const data = ffmpeg.FS('readFile', outputName);
-                    
-                    if (files.length === 1) {
-                        // 1つの場合は直接ダウンロード
-                        const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = outputName;
-                        a.click();
-                    } else {
-                        // 複数の場合はZIPに追加
-                        zip.file(outputName, data.buffer);
-                    }
+                    results.push({ name: outputName, data: data.buffer });
 
                     ffmpeg.FS('unlink', inputName);
                     ffmpeg.FS('unlink', outputName);
@@ -94,8 +83,22 @@
                 }
             }
 
-            if (files.length > 1) {
-                status.textContent = "ZIP生成中...";
+            // --- 変換終了後のダウンロード判定 ---
+            if (results.length === 1) {
+                // 1つの場合：直接ダウンロード
+                status.textContent = "ダウンロードを開始します...";
+                const url = URL.createObjectURL(new Blob([results[0].data], { type: 'video/mp4' }));
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = results[0].name;
+                a.click();
+                status.textContent = "完了しました！";
+            } else if (results.length > 1) {
+                // 複数の場合：ZIP化
+                status.textContent = "ZIP圧縮中...";
+                const zip = new JSZip();
+                results.forEach(res => zip.file(res.name, res.data));
+                
                 const zipBlob = await zip.generateAsync({ type: "blob" });
                 const url = URL.createObjectURL(zipBlob);
                 const a = document.createElement('a');
@@ -103,8 +106,6 @@
                 a.download = "converted_videos.zip";
                 a.click();
                 status.textContent = "ZIPのダウンロードを開始しました！";
-            } else {
-                status.textContent = "変換が完了しました！";
             }
             
             convertBtn.disabled = false;
