@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta name="robots" content="noindex,nofollow">
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
     <title>MOV to MP4 変換ツール</title>
 
-    <script 
-        src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.js"
-        integrity="sha384-JBKAA5TOLI44P/eKb90fF6D+AsZofG8H8QGJqi2AjShGOZElr9XrG+N+msyYDA5v" 
-        crossorigin="anonymous"></script>
+    <script src="./coi-serviceworker.js"></script>
     
     <script 
         src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"
@@ -21,16 +19,20 @@
         crossorigin="anonymous"></script>
     
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
-        #status { margin-top: 15px; padding: 10px; background: #eee; border-radius: 4px; }
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; background-color: #f9f9f9; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; }
+        button { padding: 12px 24px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 6px; width: 100%; font-size: 16px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        #status { margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 6px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>MOV → MP4 変換ツール</h2>
+        <h2>MOV → MP4 変換</h2>
+        <p>動画を選択してください（ブラウザ内で変換）</p>
         <input type="file" id="uploader" accept=".mov" multiple>
+        <br><br>
         <button id="convertBtn" disabled>変換を開始</button>
         <div id="status">ファイルを選択してください</div>
     </div>
@@ -60,7 +62,6 @@
             
             if (!ffmpeg.isLoaded()) await ffmpeg.load();
 
-            // 変換結果を格納する配列
             const results = [];
 
             for (let i = 0; i < files.length; i++) {
@@ -79,15 +80,13 @@
                     ffmpeg.FS('unlink', inputName);
                     ffmpeg.FS('unlink', outputName);
                 } catch (err) {
-                    status.textContent = `エラー: ${file.name}`;
+                    status.textContent = `エラー発生: ${file.name}`;
                     console.error(err);
                 }
             }
 
-            // --- 変換終了後のダウンロード判定 ---
             if (results.length === 1) {
-                // 1つの場合：直接ダウンロード
-                status.textContent = "ダウンロードを開始します...";
+                status.textContent = "ダウンロード開始...";
                 const url = URL.createObjectURL(new Blob([results[0].data], { type: 'video/mp4' }));
                 const a = document.createElement('a');
                 a.href = url;
@@ -95,7 +94,6 @@
                 a.click();
                 status.textContent = "完了しました！";
             } else if (results.length > 1) {
-                // 複数の場合：ZIP化
                 status.textContent = "ZIP圧縮中...";
                 const zip = new JSZip();
                 results.forEach(res => zip.file(res.name, res.data));
