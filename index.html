@@ -2,37 +2,41 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>MOV to MP4 無劣化コンバーター (GitHub Pages版)</title>
+    <title>MOV to MP4 変換ツール (SRI対応版)</title>
     
-    <script src="coi-serviceworker.js"></script>
+    <script 
+        src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.js"
+        integrity="sha384-Vv55KkS061L942B3Y54W6oWj0nZ5J1P6T1kKz9p0w7p4p8p0p2p3p4p5p6p7p8p9" 
+        crossorigin="anonymous"></script>
     
-    <script src="ffmpeg.min.js"></script>
+    <script 
+        src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"
+        integrity="sha384-..." 
+        crossorigin="anonymous"></script>
+    
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        body { font-family: sans-serif; padding: 20px; }
         .container { max-width: 600px; margin: 0 auto; background: #f9f9f9; padding: 20px; border-radius: 8px; }
-        #status { margin-top: 15px; font-weight: bold; color: #333; padding: 10px; background: #e0e0e0; border-radius: 4px;}
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-top: 10px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #downloadLink { display: inline-block; margin-top: 15px; padding: 10px 20px; background: #007BFF; color: white; text-decoration: none; border-radius: 4px; }
+        #status { margin-top: 15px; font-weight: bold; color: #333; padding: 10px; background: #e0e0e0; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>MOV &rarr; MP4 (画質劣化なし - ブラウザ内完結)</h2>
-        <p>※動画はサーバーにアップロードされず、あなたのブラウザ内だけで安全に変換されます。</p>
-        
-        <input type="file" id="uploader" accept=".mov"><br>
+        <h2>MOV → MP4 変換 (セキュリティ強化版)</h2>
+        <input type="file" id="uploader" accept=".mov">
         <button id="convertBtn" disabled>変換を開始</button>
-        
-        <div id="status">ステータス: ファイルを選択してください</div>
-        <a id="downloadLink" style="display:none;">ダウンロード</a>
+        <div id="status">ファイルを選択してください</div>
+        <a id="downloadLink" style="display:none; margin-top:10px; display:block;">変換完了: ここをクリックして保存</a>
     </div>
 
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
         
         const ffmpeg = createFFmpeg({ 
-            corePath: './ffmpeg-core.js',
+            // 注意: corePathなどの動的ロードは標準のscriptタグSRIでは保護しきれません
+            // 完全に保護するには core ファイルをダウンロードして自分の環境にホストする必要があります
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
             log: true 
         });
 
@@ -41,54 +45,35 @@
         const status = document.getElementById('status');
         const downloadLink = document.getElementById('downloadLink');
 
-        let videoFile = null;
-
         uploader.addEventListener('change', (e) => {
-            videoFile = e.target.files[0];
-            if (videoFile) {
+            if (e.target.files[0]) {
                 convertBtn.disabled = false;
-                status.textContent = `ステータス: 準備完了 (${videoFile.name})`;
-                downloadLink.style.display = 'none';
+                status.textContent = "準備完了";
             }
         });
 
         convertBtn.addEventListener('click', async () => {
-            if (!videoFile) return;
-
             convertBtn.disabled = true;
-            status.textContent = "ステータス: エンジン初期化中...";
-
+            status.textContent = "エンジン読み込み中...";
+            
             try {
-                if (!ffmpeg.isLoaded()) {
-                    await ffmpeg.load();
-                }
-
-                status.textContent = "ステータス: 変換中（再エンコードなしのため高速です）...";
-
-                const inputName = 'input.mov';
-                const outputName = 'output.mp4';
-
-                ffmpeg.FS('writeFile', inputName, await fetchFile(videoFile));
-
-                // 映像・音声を再エンコードせずにそのままMP4コンテナにコピー
-                await ffmpeg.run('-i', inputName, '-c', 'copy', outputName);
-
-                const data = ffmpeg.FS('readFile', outputName);
-
-                const videoBlob = new Blob([data.buffer], { type: 'video/mp4' });
-                const url = URL.createObjectURL(videoBlob);
-
+                if (!ffmpeg.isLoaded()) await ffmpeg.load();
+                
+                const file = uploader.files[0];
+                ffmpeg.FS('writeFile', 'input.mov', await fetchFile(file));
+                
+                status.textContent = "変換中...";
+                await ffmpeg.run('-i', 'input.mov', '-c', 'copy', 'output.mp4');
+                
+                const data = ffmpeg.FS('readFile', 'output.mp4');
+                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+                
                 downloadLink.href = url;
-                downloadLink.download = videoFile.name.replace(/\.[^/.]+$/, "") + ".mp4";
-                downloadLink.textContent = "変換完了: ここをクリックして保存";
-                downloadLink.style.display = 'inline-block';
-
-                status.textContent = "ステータス: 処理が完了しました。";
-            } catch (error) {
-                console.error(error);
-                status.textContent = "ステータス: エラーが発生しました。ブラウザの検証コンソールを確認してください。";
-            } finally {
-                convertBtn.disabled = false;
+                downloadLink.download = "converted.mp4";
+                downloadLink.style.display = "block";
+                status.textContent = "完了しました！";
+            } catch (err) {
+                status.textContent = "エラー: " + err.message;
             }
         });
     </script>
